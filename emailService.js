@@ -1,13 +1,3 @@
-// =============================================================================
-// EMAIL SERVICE - Nodemailer Configuration
-// =============================================================================
-// Purpose: Handle all email operations including OTP sending
-// Dependencies: nodemailer
-// Environment Variables Required:
-//   - GMAIL_USER: Your Gmail address
-//   - GMAIL_PASS: Your Gmail app password (not regular password)
-// =============================================================================
-
 const nodemailer = require("nodemailer");
 
 // -----------------------------------------------------------------------------
@@ -25,7 +15,6 @@ const transporter = nodemailer.createTransport({
   maxMessages: 10,
 });
 
-// Verify transporter configuration on startup
 transporter.verify((error, success) => {
   if (error) {
     console.error("❌ Email transporter configuration error:", error.message);
@@ -39,46 +28,88 @@ transporter.verify((error, success) => {
 // -----------------------------------------------------------------------------
 const emailTemplates = {
   otp: {
-    subject: "Your Olyxee Secure OTP",
+    subject: "Your Guardrail OTP Code",
     text: (otp) =>
-      `
-Hello,
+      `Hello,
 
-Your OTP verification code is: ${otp}
+Your OTP code is: ${otp}
 
-This code will expire in 5 minutes for security purposes.
-
-If you did not request this code, please ignore this email.
+This code expires in 5 minutes. If you did not request this, ignore this email.
 
 Best regards,
-Olyxee Team
-    `.trim(),
+Guardrail Team`,
     html: (otp) =>
       `
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
+  <title>Guardrail OTP</title>
   <style>
-    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .otp-box { background: #f4f4f4; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0; }
-    .otp-code { font-size: 32px; font-weight: bold; color: #2563eb; letter-spacing: 8px; }
-    .warning { color: #dc2626; font-size: 14px; margin-top: 20px; }
-    .footer { margin-top: 30px; font-size: 12px; color: #666; border-top: 1px solid #ddd; padding-top: 20px; }
+    body {
+      font-family: 'Arial', sans-serif;
+      background: #ffffff;
+      color: #333333;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 30px;
+      text-align: center;
+    }
+    .logo {
+      margin-bottom: 20px;
+    }
+    .header {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    .subheader {
+      font-size: 16px;
+      color: #555555;
+      margin-bottom: 30px;
+    }
+    .otp-box {
+      display: inline-block;
+      background: #f4f4f4;
+      padding: 20px 30px;
+      border-radius: 10px;
+      font-size: 32px;
+      font-weight: bold;
+      letter-spacing: 8px;
+      color: #2563eb;
+      cursor: pointer;
+      user-select: all;
+      margin-bottom: 20px;
+    }
+    .footer {
+      font-size: 12px;
+      color: #999999;
+      margin-top: 30px;
+      border-top: 1px solid #e5e5e5;
+      padding-top: 15px;
+    }
+    .warning {
+      font-size: 13px;
+      color: #dc2626;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <h2>Verify Your Account</h2>
-    <p>Hello Mr Stakio,</p>
-    <p>Use the following OTP to complete your verification:</p>
-    <div class="otp-box">
-      <div class="otp-code">${otp}</div>
-    </div>
-    <p><strong>This code will expire in 5 minutes.</strong></p>
-    <p class="warning">⚠️ If you did not request this code, please ignore this email.</p>
+    <img src="https://guardrailsentinel.netlify.app/_next/image?url=%2Ffavicon.ico&w=96&q=75" alt="Guardrail Logo" class="logo" width="120" />
+    <div class="header">Verify Your Account</div>
+    <div class="subheader">Use the OTP below to complete your verification:</div>
+    <div class="otp-box" onclick="navigator.clipboard.writeText('${otp}')">${otp}</div>
+    <div class="subheader"><strong>This code will expire in 5 minutes.</strong></div>
+    <div class="warning">⚠️ If you did not request this code, please ignore this email.</div>
     <div class="footer">
-      <p>Best regards,<br>Guardrail Team</p>
+      Best regards,<br>
+      Guardrail Team
     </div>
   </div>
 </body>
@@ -90,41 +121,24 @@ Olyxee Team
 // -----------------------------------------------------------------------------
 // MAIN EMAIL FUNCTIONS
 // -----------------------------------------------------------------------------
-
-/**
- * Send OTP to user's email
- * @param {string} email - Recipient email address
- * @param {string} otp - One-time password to send
- * @returns {Promise<Object>} Email send result
- */
 async function sendOTP(email, otp) {
   try {
-    // Validate inputs
-    if (!email || !otp) {
-      throw new Error("Email and OTP are required");
-    }
+    if (!email || !otp) throw new Error("Email and OTP are required");
 
-    // Email options
     const mailOptions = {
-      from: {
-        name: "Guardrail",
-        address: process.env.GMAIL_USER,
-      },
+      from: { name: "Guardrail", address: process.env.GMAIL_USER },
       to: email,
       subject: emailTemplates.otp.subject,
       text: emailTemplates.otp.text(otp),
       html: emailTemplates.otp.html(otp),
     };
 
-    // Send email
     const info = await transporter.sendMail(mailOptions);
 
-    console.log("✅ OTP sent successfully:", {
+    console.log("✅ OTP sent:", {
       messageId: info.messageId,
       recipient: email,
-      timestamp: new Date().toISOString(),
     });
-
     return {
       success: true,
       messageId: info.messageId,
@@ -134,32 +148,18 @@ async function sendOTP(email, otp) {
     console.error("❌ Email send error:", {
       error: error.message,
       recipient: email,
-      timestamp: new Date().toISOString(),
     });
     throw new Error(`Failed to send OTP: ${error.message}`);
   }
 }
 
-/**
- * Send a generic email (for future use)
- * @param {Object} options - Email options
- * @param {string} options.to - Recipient email
- * @param {string} options.subject - Email subject
- * @param {string} options.text - Plain text content
- * @param {string} options.html - HTML content (optional)
- * @returns {Promise<Object>} Email send result
- */
 async function sendEmail({ to, subject, text, html }) {
   try {
-    if (!to || !subject || !text) {
+    if (!to || !subject || !text)
       throw new Error("To, subject, and text are required");
-    }
 
     const mailOptions = {
-      from: {
-        name: "Guardrail",
-        address: process.env.GMAIL_USER,
-      },
+      from: { name: "Guardrail", address: process.env.GMAIL_USER },
       to,
       subject,
       text,
@@ -168,13 +168,11 @@ async function sendEmail({ to, subject, text, html }) {
 
     const info = await transporter.sendMail(mailOptions);
 
-    console.log("✅ Email sent successfully:", {
+    console.log("✅ Email sent:", {
       messageId: info.messageId,
       recipient: to,
       subject,
-      timestamp: new Date().toISOString(),
     });
-
     return {
       success: true,
       messageId: info.messageId,
@@ -184,17 +182,9 @@ async function sendEmail({ to, subject, text, html }) {
     console.error("❌ Email send error:", {
       error: error.message,
       recipient: to,
-      timestamp: new Date().toISOString(),
     });
     throw new Error(`Failed to send email: ${error.message}`);
   }
 }
 
-// -----------------------------------------------------------------------------
-// EXPORTS
-// -----------------------------------------------------------------------------
-module.exports = {
-  sendOTP,
-  sendEmail,
-  transporter, // Export for testing or advanced use cases
-};
+module.exports = { sendOTP, sendEmail, transporter };
